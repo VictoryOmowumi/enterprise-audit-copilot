@@ -1,0 +1,276 @@
+import type { BreachKind, ContractClause, Shipment, Vendor } from "@/lib/types"
+
+export const VENDORS: Vendor[] = [
+  { code: "VEND-APEX-001", name: "Apex Logistics Global" },
+  { code: "VEND-SAHEL-002", name: "Sahel Freight Partners" },
+  { code: "VEND-NRTH-003", name: "Northstar Cold Chain" },
+]
+
+export const DEFAULT_VENDOR_CODE = "VEND-APEX-001"
+
+export const QUICK_PROMPTS: Record<BreachKind, string> = {
+  DELAY: "Delay penalty exceeding 24 hours",
+  COLD_CHAIN: "Refrigerated cold chain temperature excursion liability",
+  DAMAGE: "Damaged cartons and POD photo evidence timeline",
+}
+
+export const SHIPMENTS: Shipment[] = [
+  {
+    id: "SHP-2026-0891",
+    vendorCode: "VEND-APEX-001",
+    origin: "Ikeja Plant",
+    destination: "Lekki DC",
+    dispatchedAt: "2026-09-18T06:40:00Z",
+    transitMinutes: 52 * 60 + 10,
+    slaLimitHours: 48,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 18_500,
+    status: "BREACH",
+    breachKinds: ["DELAY"],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0894",
+    vendorCode: "VEND-APEX-001",
+    origin: "Abuja Hub",
+    destination: "Kano Distribution",
+    dispatchedAt: "2026-09-19T21:15:00Z",
+    transitMinutes: 30 * 60 + 5,
+    slaLimitHours: 36,
+    coldChain: { thresholdC: 8, maxTempC: 11.2, excursionMinutes: 45 },
+    damage: null,
+    consignmentValue: 24_000,
+    status: "BREACH",
+    breachKinds: ["COLD_CHAIN"],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0877",
+    vendorCode: "VEND-APEX-001",
+    origin: "Port Harcourt Terminal",
+    destination: "Enugu DC",
+    dispatchedAt: "2026-09-14T04:00:00Z",
+    transitMinutes: 81 * 60 + 25,
+    slaLimitHours: 48,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 15_500,
+    status: "BREACH",
+    breachKinds: ["DELAY"],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0902",
+    vendorCode: "VEND-APEX-001",
+    origin: "Apapa Port",
+    destination: "Ibadan DC",
+    dispatchedAt: "2026-09-21T08:30:00Z",
+    transitMinutes: 20 * 60,
+    slaLimitHours: 24,
+    coldChain: null,
+    damage: { cartonsDamaged: 14, cartonsTotal: 220, podPhotos: 6 },
+    consignmentValue: 12_500,
+    status: "BREACH",
+    breachKinds: ["DAMAGE"],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0905",
+    vendorCode: "VEND-APEX-001",
+    origin: "Kaduna Plant",
+    destination: "Jos DC",
+    dispatchedAt: "2026-09-22T05:10:00Z",
+    transitMinutes: 34 * 60 + 20,
+    slaLimitHours: 36,
+    coldChain: { thresholdC: 8, maxTempC: 7.6, excursionMinutes: 0 },
+    damage: null,
+    consignmentValue: 21_000,
+    status: "AT_RISK",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0899",
+    vendorCode: "VEND-APEX-001",
+    origin: "Benin City Hub",
+    destination: "Warri DC",
+    dispatchedAt: "2026-09-20T11:00:00Z",
+    transitMinutes: 22 * 60 + 40,
+    slaLimitHours: 24,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 9_800,
+    status: "AT_RISK",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0886",
+    vendorCode: "VEND-APEX-001",
+    origin: "Ikeja Plant",
+    destination: "Ikorodu DC",
+    dispatchedAt: "2026-09-17T07:00:00Z",
+    transitMinutes: 9 * 60 + 15,
+    slaLimitHours: 12,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 7_200,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0888",
+    vendorCode: "VEND-APEX-001",
+    origin: "Onitsha Depot",
+    destination: "Owerri DC",
+    dispatchedAt: "2026-09-17T13:20:00Z",
+    transitMinutes: 14 * 60,
+    slaLimitHours: 24,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 8_900,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0893",
+    vendorCode: "VEND-APEX-001",
+    origin: "Kano Distribution",
+    destination: "Maiduguri DC",
+    dispatchedAt: "2026-09-19T03:45:00Z",
+    transitMinutes: 38 * 60 + 50,
+    slaLimitHours: 48,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 16_400,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0896",
+    vendorCode: "VEND-APEX-001",
+    origin: "Lagos Cold Store",
+    destination: "Abeokuta DC",
+    dispatchedAt: "2026-09-20T02:00:00Z",
+    transitMinutes: 6 * 60 + 20,
+    slaLimitHours: 12,
+    coldChain: { thresholdC: 8, maxTempC: 5.8, excursionMinutes: 0 },
+    damage: null,
+    consignmentValue: 19_750,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0898",
+    vendorCode: "VEND-APEX-001",
+    origin: "Ilorin Hub",
+    destination: "Osogbo DC",
+    dispatchedAt: "2026-09-20T09:30:00Z",
+    transitMinutes: 7 * 60,
+    slaLimitHours: 12,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 5_600,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+  {
+    id: "SHP-2026-0901",
+    vendorCode: "VEND-APEX-001",
+    origin: "Calabar Port",
+    destination: "Uyo DC",
+    dispatchedAt: "2026-09-21T10:10:00Z",
+    transitMinutes: 5 * 60 + 5,
+    slaLimitHours: 8,
+    coldChain: null,
+    damage: null,
+    consignmentValue: 6_300,
+    status: "COMPLIANT",
+    breachKinds: [],
+    inTransit: false,
+    notes: null,
+  },
+]
+
+/** Served when the retrieval API is unreachable. Scores are assigned at query time. */
+export const DEMO_CLAUSES: Omit<ContractClause, "vector_score" | "fts_score">[] = [
+  {
+    id: "demo-4.2",
+    section_title: "§4.2 Transit Delay Penalties",
+    document_name: "apex_master_services_agreement.md",
+    clause_type: "SLA_PENALTY",
+    content: `Where actual transit time exceeds the **contracted SLA threshold** for the lane, the Carrier shall credit the Shipper a penalty equal to **5% of the declared consignment value** per breached shipment.
+
+- Transit time is measured from gate-out scan at origin to signed POD at destination.
+- Force majeure events must be notified within **6 hours** of occurrence to be excluded.
+- Penalties are deducted from the next scheduled invoice cycle.`,
+  },
+  {
+    id: "demo-4.3",
+    section_title: "§4.3 Extended Delay Escalation (>24 Hours)",
+    document_name: "apex_master_services_agreement.md",
+    clause_type: "SLA_PENALTY",
+    content: `Any delay exceeding the SLA threshold by **more than 24 hours** constitutes a **Material Service Failure**.
+
+- The §4.2 penalty becomes **non-waivable** and is not subject to the quarterly credit cap.
+- The Shipper may reject the consignment at the Carrier's cost.
+- Three Material Service Failures in a rolling 90-day window permit termination for cause.`,
+  },
+  {
+    id: "demo-6.1",
+    section_title: "§6.1 Refrigerated Cargo Temperature Control",
+    document_name: "apex_cold_chain_addendum.md",
+    clause_type: "TEMPERATURE_CONTROL",
+    content: `Refrigerated consignments shall be maintained between **2°C and 8°C** for the full transit duration, verified by the Carrier's calibrated data loggers at **5-minute intervals**.
+
+- An **excursion** is any reading above 8°C sustained for **30 minutes or longer**.
+- Logger data must be made available to the Shipper within **24 hours** of delivery.`,
+  },
+  {
+    id: "demo-6.4",
+    section_title: "§6.4 Excursion Liability & Product Write-off",
+    document_name: "apex_cold_chain_addendum.md",
+    clause_type: "TEMPERATURE_CONTROL",
+    content: `Upon a confirmed temperature excursion, the Carrier is liable for a penalty of **7.5% of consignment value**, plus the cost of any product written off by the Shipper's Quality Assurance function.
+
+- The Carrier may contest liability only with **continuous, unbroken logger data** for the excursion window.
+- Write-off determinations by Shipper QA are final.`,
+  },
+  {
+    id: "demo-7.2",
+    section_title: "§7.2 Damaged Goods & POD Evidence",
+    document_name: "apex_master_services_agreement.md",
+    clause_type: "DAMAGE_LIABILITY",
+    content: `Cartons received damaged shall be annotated on the **Proof of Delivery (POD)** at the time of receipt and supported by **timestamped photographic evidence**.
+
+- Claims must be lodged within **72 hours** of POD signature.
+- Carrier liability is **6% of consignment value** plus replacement cost of damaged units.
+- Unannotated PODs create a rebuttable presumption of clean delivery.`,
+  },
+  {
+    id: "demo-3.1",
+    section_title: "§3.1 Lane Delivery Timelines",
+    document_name: "apex_master_services_agreement.md",
+    clause_type: "DELIVERY_TIMELINE",
+    content: `Contracted SLA thresholds per lane are set out in **Schedule B**. Intra-state lanes: **12–24 hours**. Inter-state trunk lanes: **36–48 hours**.
+
+- Thresholds are reviewed quarterly against 90-day on-time performance.`,
+  },
+]

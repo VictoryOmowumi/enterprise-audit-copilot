@@ -5,7 +5,7 @@ import redis
 import asyncpg
 from typing import Optional
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -104,6 +104,54 @@ async def retrieve_clauses(payload: SearchRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Retrieval failed: {str(e)}")
+
+@app.get("/api/shipments")
+async def list_shipments(
+    vendor_code: Optional[str] = None,
+    limit: int = Query(50, ge=1, le=500),
+):
+    """
+    Lists shipment records joined with vendor metadata, newest dispatch first.
+    SLA thresholds and transit times are derived by the client from the timestamps.
+    """
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database pool not ready")
+
+    sql = """
+        SELECT
+            s.tracking_number, s.origin, s.destination,
+            s.dispatched_at, s.expected_delivery_at, s.actual_delivery_at,
+            s.status, s.declared_value, s.discrepancy_notes,
+            v.contract_code, v.name AS vendor_name
+        FROM shipments s
+        JOIN vendors v ON s.vendor_id = v.id
+        WHERE ($1::text IS NULL OR v.contract_code = $1::text)
+        ORDER BY s.dispatched_at DESC
+        LIMIT $2;
+    """
+    try:
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch(sql, vendor_code, limit)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch shipments: {str(e)}")
+
+    shipments = [
+        {
+            "tracking_number": r["tracking_number"],
+            "vendor_code": r["contract_code"],
+            "vendor_name": r["vendor_name"],
+            "origin": r["origin"],
+            "destination": r["destination"],
+            "dispatched_at": r["dispatched_at"].isoformat(),
+            "expected_delivery_at": r["expected_delivery_at"].isoformat(),
+            "actual_delivery_at": r["actual_delivery_at"].isoformat() if r["actual_delivery_at"] else None,
+            "status": r["status"],
+            "declared_value": float(r["declared_value"]),
+            "discrepancy_notes": r["discrepancy_notes"],
+        }
+        for r in rows
+    ]
+    return {"total": len(shipments), "shipments": shipments}
 
 @app.post("/api/ingest/async", status_code=status.HTTP_202_ACCEPTED)
 async def queue_clause_ingestion(payload: AsyncIngestRequest):

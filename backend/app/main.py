@@ -153,6 +153,48 @@ async def list_shipments(
     ]
     return {"total": len(shipments), "shipments": shipments}
 
+@app.get("/api/contracts")
+async def list_contract_clauses(vendor_code: Optional[str] = None):
+    """
+    Lists stored contract clauses with vendor metadata, ordered by document then
+    insertion. `embedded` is false for clauses awaiting an embedding backfill.
+    """
+    if not db_pool:
+        raise HTTPException(status_code=503, detail="Database pool not ready")
+
+    sql = """
+        SELECT
+            c.id, c.document_name, c.section_title, c.clause_type, c.content,
+            c.page_number, c.embedding IS NOT NULL AS embedded, c.created_at,
+            v.contract_code, v.name AS vendor_name
+        FROM contract_clauses c
+        JOIN vendors v ON c.vendor_id = v.id
+        WHERE ($1::text IS NULL OR v.contract_code = $1::text)
+        ORDER BY c.document_name, c.id;
+    """
+    try:
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch(sql, vendor_code)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch contracts: {str(e)}")
+
+    clauses = [
+        {
+            "id": r["id"],
+            "document_name": r["document_name"],
+            "section_title": r["section_title"],
+            "clause_type": r["clause_type"],
+            "content": r["content"],
+            "page_number": r["page_number"],
+            "embedded": r["embedded"],
+            "created_at": r["created_at"].isoformat() if r["created_at"] else None,
+            "vendor_code": r["contract_code"],
+            "vendor_name": r["vendor_name"],
+        }
+        for r in rows
+    ]
+    return {"total": len(clauses), "clauses": clauses}
+
 @app.post("/api/ingest/async", status_code=status.HTTP_202_ACCEPTED)
 async def queue_clause_ingestion(payload: AsyncIngestRequest):
     """

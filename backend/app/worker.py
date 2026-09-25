@@ -27,11 +27,15 @@ async def process_clause_job(task_data: dict):
     doc_name = task_data.get("document_name", "manual_entry.md")
 
     print(f"⚙️ [Worker] Generating embedding for clause: '{section_title}'...")
-    
-    # 1. Generate 768-dim vector
+
+    # 1. Generate 768-dim vector. When no embedding backend is available the clause
+    #    is stored with a NULL embedding: FTS still finds it, and
+    #    backfill_embeddings.py fills the vector later.
     text_to_embed = f"{section_title}: {content}"
-    vector = generate_embeddings([text_to_embed])[0]
-    vector_str = str(vector)
+    vectors = generate_embeddings([text_to_embed])
+    vector_str = str(vectors[0]) if vectors else None
+    if vector_str is None:
+        print("⚠️ [Worker] No embedding available; storing clause for later backfill.")
 
     # 2. Write to PostgreSQL
     conn = await asyncpg.connect(dsn=DATABASE_URL)
@@ -63,9 +67,12 @@ async def process_clause_job(task_data: dict):
     finally:
         await conn.close()
 
+    return {"clause_id": clause_id, "embedded": vector_str is not None}
+
 def run_worker():
     print("🚀 [Worker] Ingestion Background Worker started. Listening for Redis jobs...")
     while True:
+        task_id = None
         try:
             # BRPOP blocks until an item is pushed into the queue (0 = block forever)
             result = r.brpop(QUEUE_KEY, timeout=5)
@@ -74,18 +81,24 @@ def run_worker():
                 task_data = json.loads(task_json)
                 task_id = task_data.get("task_id", "unknown")
                 print(f"📥 [Worker] Received task [{task_id}]: {task_data.get('section_title')}")
-                
+
                 # Update status in Redis
-                r.set(f"audit:task:{task_id}", json.dumps({"status": "processing"}))
+                r.set(f"audit:task:{task_id}", json.dumps({"status": "processing"}), ex=3600)
 
                 # Execute async database and embedding work
-                asyncio.run(process_clause_job(task_data))
+                outcome = asyncio.run(process_clause_job(task_data))
 
                 # Mark complete
-                r.set(f"audit:task:{task_id}", json.dumps({"status": "completed"}), ex=3600)
+                r.set(f"audit:task:{task_id}", json.dumps({"status": "completed", **outcome}), ex=3600)
                 print(f"🎉 [Worker] Task [{task_id}] completed.")
         except Exception as e:
             print(f"❌ [Worker] Error processing job: {e}")
+            # Record the failure so pollers don't wait on "processing" forever.
+            if task_id:
+                try:
+                    r.set(f"audit:task:{task_id}", json.dumps({"status": "failed", "error": str(e)}), ex=3600)
+                except Exception:
+                    pass
             time.sleep(2)
 
 if __name__ == "__main__":

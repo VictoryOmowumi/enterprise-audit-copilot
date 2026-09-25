@@ -1,6 +1,8 @@
 import os
 import re
+import sys
 import asyncio
+import traceback
 import polars as pl
 import asyncpg
 from app.schemas import ShipmentSchema, ContractClauseChunk
@@ -37,7 +39,7 @@ def parse_markdown_clauses(filepath: str, vendor_code: str) -> list[ContractClau
             continue
 
         lines = sec.split("\n")
-        title_line = lines[0].replace("##", "").strip()
+        title_line = lines[0].lstrip("#").strip()
         body = "\n".join(lines[1:]).strip()
 
         # Classify clause type based on header content

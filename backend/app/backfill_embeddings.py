@@ -31,6 +31,9 @@ async def backfill():
         # Generate 768-dim vectors
         print("🧠 Computing dense vector embeddings...")
         embeddings = generate_embeddings(texts_to_embed)
+        if len(embeddings) != len(clause_ids):
+            print("⚠️ No embedding backend available (set HF_TOKEN or ENABLE_LOCAL_EMBEDDINGS=true). Nothing updated.")
+            return
 
         # Batch update PostgreSQL
         print("💾 Saving embeddings to pgvector...")

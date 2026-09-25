@@ -48,10 +48,18 @@ def generate_embeddings(texts: list[str]) -> list[list[float]]:
     if not texts:
         return []
 
-    # 1. Primary: Serverless remote inference (0 MB RAM)
-    remote_vec = get_remote_embedding(texts[0])
-    if remote_vec and isinstance(remote_vec, list) and len(remote_vec) == 768:
-        return [remote_vec]
+    # 1. Primary: Serverless remote inference (0 MB RAM). One request per text
+    #    keeps response shapes predictable. All-or-nothing: a partial list would
+    #    misalign vectors with their inputs in batch callers like the backfill.
+    remote_vecs = []
+    for text in texts:
+        vec = get_remote_embedding(text)
+        if not (isinstance(vec, list) and len(vec) == 768):
+            remote_vecs = None
+            break
+        remote_vecs.append(vec)
+    if remote_vecs is not None:
+        return remote_vecs
 
     # 2. Local fallback ONLY if explicitly enabled (e.g. local Docker with >2GB RAM)
     if os.getenv("ENABLE_LOCAL_EMBEDDINGS", "false").lower() == "true":

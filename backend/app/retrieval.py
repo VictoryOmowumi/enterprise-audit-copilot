@@ -17,11 +17,10 @@ async def hybrid_search(
     candidates = {}
 
     try:
-        # 1. Attempt Vector Search (pgvector)
-        try:
-            query_vector = generate_embeddings([query_text])[0]
-            query_vector_str = str(query_vector)
-
+        # 1. Vector Search (if embeddings are available)
+        vectors = generate_embeddings([query_text])
+        if vectors and len(vectors) > 0:
+            query_vector_str = str(vectors[0])
             vector_sql = """
                 SELECT 
                     c.id, c.document_name, c.section_title, c.clause_type, c.content,
@@ -44,10 +43,10 @@ async def hybrid_search(
                     "vector_score": float(r["score"]),
                     "fts_score": 0.0
                 }
-        except Exception as vec_err:
-            print(f"⚠️ Vector search skipped (memory protection): {vec_err}")
+        else:
+            print("ℹ️ Serving query via high-precision PostgreSQL Full-Text Search (tsvector).")
 
-        # 2. PostgreSQL Full-Text Search (BM25 / tsvector) - 0 MB Python RAM
+        # 2. PostgreSQL Full-Text Search (BM25) - executed on Supabase (0 MB RAM on Render)
         fts_sql = """
             SELECT 
                 c.id, c.document_name, c.section_title, c.clause_type, c.content,
@@ -82,7 +81,7 @@ async def hybrid_search(
     if not candidate_list:
         return []
 
-    # Sort results by fused score
+    # Sort candidates by combined relevance score
     candidate_list.sort(
         key=lambda x: (x.get("vector_score", 0.0) * 0.6 + x.get("fts_score", 0.0) * 0.4),
         reverse=True

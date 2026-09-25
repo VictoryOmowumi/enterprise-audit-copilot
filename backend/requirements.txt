@@ -1,0 +1,12 @@
+fastapi>=0.111.0
+uvicorn[standard]>=0.30.0
+pydantic>=2.7.0
+asyncpg>=0.29.0
+python-dotenv>=1.0.1
+psycopg[binary]>=3.1.18
+pgvector>=0.3.0
+polars>=0.20.25
+pyarrow>=15.0.0
+fastembed>=0.3.0
+flashrank>=0.2.9
+redis>=5.0.4

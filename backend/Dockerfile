@@ -1,0 +1,40 @@
+# ---------------------------------------------------
+# Stage 1: Build & compile dependencies
+# ---------------------------------------------------
+FROM python:3.11-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir --user -r requirements.txt
+
+# ---------------------------------------------------
+# Stage 2: Clean, lightweight runtime
+# ---------------------------------------------------
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+# Create a non-root system user for security
+RUN groupadd -r appgroup && useradd -r -g appgroup appuser
+
+# Copy installed Python packages from the builder stage
+COPY --from=builder /root/.local /home/appuser/.local
+
+# Ensure the non-root user can access the local bin
+ENV PATH=/home/appuser/.local/bin:$PATH
+ENV PYTHONUNBUFFERED=1
+
+# Copy application source code
+COPY --chown=appuser:appgroup ./app /app/app
+
+USER appuser
+
+EXPOSE 8000
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
